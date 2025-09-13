@@ -3,8 +3,8 @@
 
 const express = require('express');
 const router = express.Router();
-const foodController = require('../controllers/food.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+const foodController = require('../controllers/food.controller'); //this is the controller file that will be used to handle the logic of the routes and will validate the data and then call the model to perform the operation
+const authMiddleware = require('../middlewares/auth.middleware');//this is the middleware file that will be used to authenticate the user and food partner and then call the controller to perform the operation
 const multer = require('multer');
 
 const upload = multer({

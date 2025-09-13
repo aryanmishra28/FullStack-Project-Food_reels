@@ -1,0 +1,169 @@
+I'll scan the backend entry files first to understand the app's startup flow, then pull in controllers, routes, models, middleware, and services to map how they connect.
+
+[3 tools called]
+
+I'll open the routes, controllers, models, middleware, DB connection, and storage service files to map data flow and dependencies.
+
+[10 tools called]
+
+- I scanned the backend entry, routes, controllers, models, middleware, DB connector, and storage service to map the flow end-to-end. Now I’ll explain how they connect, what runs first, how data moves, and how it’s processed.
+
+### Big picture: How everything connects
+- **`server.js` (entry point)**: Starts the app, loads environment variables, connects to the database, and starts listening on a port.
+- **`src/app.js` (Express app)**: Creates the Express server, registers middlewares, and mounts the route modules under URL prefixes.
+- **Routes (`src/routes/*.routes.js`)**: Define API endpoints and point each endpoint to a controller function. Some routes add middlewares (like auth and file upload).
+- **Controllers (`src/controllers/*.controller.js`)**: Contain the actual logic for each endpoint: read request data, call services, save/read database via models, set cookies, and send responses.
+- **Models (`src/models/*.model.js`)**: Define MongoDB data shapes using Mongoose and provide methods like `create`, `find`, etc.
+- **Middleware (`src/middlewares/auth.middleware.js`)**: Gatekeepers that run before controllers; they verify JWT tokens from cookies and attach the current user/partner to the request.
+- **DB (`src/db/db.js`)**: Connects Mongoose to MongoDB using an environment variable.
+- **Service (`src/services/storage.service.js`)**: Uploads files (video) to ImageKit and returns a URL.
+
+### What runs first?
+1. You run Node on the backend: for example: `node backend/server.js`.
+2. `server.js` runs:
+   - Loads `.env` via `dotenv`.
+   - Calls the DB connector to connect to MongoDB.
+   - Imports the Express app from `src/app.js`.
+   - Starts the HTTP server on port 3000.
+3. `src/app.js` runs when imported:
+   - Creates the Express app.
+   - Adds `cookie-parser` and `express.json` middlewares.
+   - Mounts routes at `/api/auth` and `/api/food`.
+
+Minimal snippets to visualize:
+```2:10:backend/server.js
+const app=require('./src/app');
+const connectDB=require('./src/db/db');
+require('dotenv').config();
+connectDB();
+app.listen(3000,()=>{ console.log("server started at port 3000"); });
+```
+
+```7:16:backend/src/app.js
+const app=express();
+app.use(cookieParser());
+app.use(express.json());
+app.use('/api/auth', authRoutes);
+app.use('/api/food', foodRoutes);
+module.exports=app;
+```
+
+### How data flows (request lifecycle)
+- **Auth: Register/Login (User or Food Partner)**
+  - Route: `src/routes/auth.routes.js`
+    - Endpoints:
+      - `POST /api/auth/user/register`, `POST /api/auth/user/login`, `GET /api/auth/user/logout`
+      - `POST /api/auth/foodpartner/register`, `POST /api/auth/foodpartner/login`, `GET /api/auth/foodpartner/logout`
+    - Each endpoint calls a controller function in `auth.controller.js`.
+  - Controller: `src/controllers/auth.controller.js`
+    - Reads JSON body from `req.body` thanks to `express.json()`.
+    - Registration:
+      - Check if email exists (`userModel.findOne` or `foodPartnerModel.findOne`).
+      - Hash password with `bcrypt.hash`.
+      - Save to MongoDB with `Model.create`.
+      - Create a JWT: `jwt.sign({ id: _id }, JWT_SECRET, { expiresIn: '1h' })`.
+      - Store token in a cookie: `res.cookie("token", token)`.
+      - Respond with user/partner info (excluding password).
+    - Login:
+      - Find by email.
+      - Compare password with `bcrypt.compare`.
+      - Sign a JWT and set cookie like above.
+    - Logout: `res.clearCookie("token")`.
+
+- **Protected routes and authentication middleware**
+  - `src/middlewares/auth.middleware.js`
+    - Reads token from `req.cookies.token` (set previously by login/register).
+    - Verifies it with `jwt.verify(token, JWT_SECRET)`.
+    - Fetches the user/food partner from DB (`findById`) using the decoded id.
+    - Attaches the entity to the request (`req.user` or `req.foodPartner`) and calls `next()` so the controller can use it.
+  - Route usage:
+    - `POST /api/food/` requires `authFoodPartnerMiddleware` (must be a logged-in food partner).
+    - `GET /api/food/` requires `authUserMiddleware` (must be a logged-in user).
+
+- **Food creation and listing**
+  - Route: `src/routes/food.routes.js`
+    - Uses `multer` with `memoryStorage` to accept a single file named `video` in the form data (`upload.single('video')`).
+    - POST `/api/food/` → runs `authFoodPartnerMiddleware` → runs `multer` → calls `foodController.createFood`.
+    - GET `/api/food/` → runs `authUserMiddleware` → calls `foodController.getFoodItems`.
+  - Controller: `src/controllers/food.controller.js`
+    - `createFood`:
+      - Receives text fields (`name`, `description`) from `req.body`.
+      - Receives the video file buffer at `req.file.buffer` (provided by multer).
+      - Calls the storage service to upload the file: `storageService.uploadFile(req.file.buffer, uuid())`.
+      - Gets back a result with a `url`.
+      - Saves a new food item to MongoDB with `foodModel.create({ name, description, video: url, foodPartner: req.foodPartner.id })`.
+      - Returns the created item.
+    - `getFoodItems`:
+      - Fetches all foods with `foodModel.find({})`.
+      - Returns them.
+
+- **File upload service (ImageKit)**
+  - `src/services/storage.service.js`
+    - Configures ImageKit with environment variables: `IMAGE_PUBLIC_KEY`, `IMAGE_PRIVATE_KEY`, `IMAGE_URL_ENDPOINT`.
+    - `uploadFile(file, fileName)` calls `imagekit.upload({ file, fileName })` and returns the result (which includes the public URL).
+  - This service decouples upload logic from controllers. If you swap ImageKit for another provider later, you only update this file.
+
+- **Database connection**
+  - `src/db/db.js`
+    - Exports `connectDB()` which calls `mongoose.connect(process.env.MONGODB_URI)`.
+    - Logs success/failure. Called once in `server.js` before the server starts responding to requests.
+
+- **Data models (MongoDB schemas)**
+  - `src/models/user.model.js`
+    - Fields: `fullName`, `email`, `password`, with timestamps.
+  - `src/models/foodpartner.model.js`
+    - Fields: `name`, `email` (unique), `password`.
+    - Uses `mongoose.models.FoodPartner || mongoose.model(...)` to avoid model overwrite in hot reload scenarios.
+  - `src/models/food.model.js`
+    - Fields: `name`, `video` (URL), `description`, `foodPartner` (ObjectId ref to `FoodPartner`).
+  - Controllers import these models to read/write data.
+
+### How requests “take data” from other files and process it
+- **From the client:**
+  - JSON body: read via `express.json()` into `req.body`.
+  - Cookies: read via `cookie-parser` into `req.cookies`.
+  - File uploads: read via `multer` into `req.file` (buffer in memory).
+- **From your code:**
+  - Controllers import Models to talk to MongoDB.
+  - Controllers import Services (e.g., storage) to upload files to third-party.
+  - Routes import Controllers and Middlewares to assemble the request pipeline.
+  - Middleware imports Models and `jsonwebtoken` to authenticate users.
+
+### Environment variables you need
+- `MONGODB_URI` for MongoDB.
+- `JWT_SECRET` for signing/verifying JWTs.
+- `IMAGE_PUBLIC_KEY`, `IMAGE_PRIVATE_KEY`, `IMAGE_URL_ENDPOINT` for ImageKit.
+- `.env` must exist in `backend/` so `dotenv` can load it.
+
+### How to run locally (backend)
+- Create `backend/.env` with:
+  - `MONGODB_URI=...`
+  - `JWT_SECRET=...`
+  - `IMAGE_PUBLIC_KEY=...`
+  - `IMAGE_PRIVATE_KEY=...`
+  - `IMAGE_URL_ENDPOINT=...`
+- Install deps: in `backend/`, run `npm install`.
+- Start: `node server.js` (there’s currently no `start` script in `package.json`).
+
+### Notable issues and small fixes to consider
+- In `src/middlewares/auth.middleware.js`, the import path is `../models/foodPartner.model` but the file is `foodpartner.model.js`. On case-sensitive systems (Linux/CI), this will break. Change import to `../models/foodpartner.model`.
+- In `src/controllers/food.controller.js`, `createFood` sends a JSON response and then calls `res.send("Food created successfully")` again. Sending twice will cause an error. Remove the extra `res.send`.
+- In `src/models/user.model.js`, `email` has `Unique: true` (capital U). It should be `unique: true` to work.
+- `package.json` has no `"start"` script. Add `"start": "node server.js"` for convenience.
+- Port is hardcoded to `3000` in `server.js`. Optionally use `process.env.PORT || 3000`.
+
+### Other folders
+- `frontend/` is empty in this snapshot.
+- `videos/` contains a sample `.mp4` likely used during development/testing.
+
+### In plain words for a newcomer
+- Think of `server.js` as the app’s power button. It turns on the server, connects to the database, and points to the main application in `app.js`.
+- `app.js` is the building’s lobby. It installs helpers to read cookies and JSON, and it tells the server: “when someone visits `/api/auth`, use the auth routes; when they visit `/api/food`, use the food routes.”
+- Routes are like reception desks for different features. They don’t do the work themselves; they hand tasks to controllers.
+- Controllers are the workers. They read the request, check the database via models, maybe upload files using a service, and then answer back.
+- Middleware are security guards. They check the cookie (your login token) and let you through only if you’re logged in.
+- Models are the forms that define what data looks like in the database (users, partners, foods).
+- The storage service is like a cloud drive helper that uploads your video and returns a link.
+- Environment variables are secret keys and connection strings you don’t hardcode.
+
+- Completed: mapped entry point, routes/controllers/models/middleware/service, data flow, and startup order. If you want, I can quickly apply the three small fixes I called out and add a `start` script.

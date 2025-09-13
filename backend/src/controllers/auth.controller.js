@@ -18,6 +18,7 @@ async function registerUser(req, res) {
 
     // Hash the password before saving, we use bcrypt for hashing
     const hashedPassword = await bcrypt.hash(password, 10);
+    //save the user to the database
     const user = await userModel.create({ fullName, email, password: hashedPassword });
 
     // Generate a JWT token for the user which will be used for authentication

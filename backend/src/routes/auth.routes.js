@@ -17,3 +17,11 @@ router.get('/foodpartner/logout', authController.logoutFoodPartner);
 
 
 module.exports = router;
+
+
+//Auth: Register/Login (User or Food Partner)
+// Route: src/routes/auth.routes.js
+// Endpoints:
+// POST /api/auth/user/register, POST /api/auth/user/login, GET /api/auth/user/logout
+// POST /api/auth/foodpartner/register, POST /api/auth/foodpartner/login, GET /api/auth/foodpartner/logout
+// Each endpoint calls a controller function in auth.controller.js.
