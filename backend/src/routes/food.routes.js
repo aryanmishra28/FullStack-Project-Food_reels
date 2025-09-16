@@ -14,12 +14,33 @@ const upload = multer({
 // POST /api/food/
 router.post('/', authMiddleware.authFoodPartnerMiddleware,
     upload.single('video'),
-    foodController.createFood);
+    foodController.createFood); //this route is used to create a new food item, it uses authFoodPartnerMiddleware to authenticate the food partner before allowing them to create a food item, it also uses multer middleware to handle file upload, the video file will be available in req.file in the controller
 
 
 // GET /api/food/
 router.get('/',
     authMiddleware.authUserMiddleware,
-    foodController.getFoodItems);
+    foodController.getFoodItems); //this route is used to fetch all food items, it uses authUserMiddleware to authenticate the user before allowing them to fetch food items
+
+
+router.post('/like',
+    authMiddleware.authUserMiddleware,
+    foodController.likeFood// this calls likeFood function in food.controller.js
+)
+    //this route is used to like a food item, it uses authUserMiddleware to authenticate the user before allowing them to like a food item
+
+
+router.post('/save',
+    authMiddleware.authUserMiddleware,
+    foodController.saveFood// this calls saveFood function in food.controller.js
+)
+//this route is used to save a food item, it uses authUserMiddleware to authenticate the user before allowing them to save a food item
+
+
+router.get('/save',
+    authMiddleware.authUserMiddleware,
+    foodController.getSaveFood // this calls getSaveFood function in food.controller.js
+)
+//this route is used to get all saved food items of a user, it uses authUserMiddleware to authenticate the user before allowing them to get saved food items
 
 module.exports = router;

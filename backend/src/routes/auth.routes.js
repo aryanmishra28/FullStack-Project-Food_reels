@@ -5,8 +5,8 @@ const authController = require('../controllers/auth.controller');
 const router = express.Router();
 
 //user auth APIs
-router.post('/user/register',authController.registerUser);
-router.post('/user/login', authController.loginUser);
+router.post('/user/register',authController.registerUser); // from auth.controller.js
+router.post('/user/login', authController.loginUser);// from auth.controller.js
 router.get('/user/logout', authController.logoutUser);
 
 
