@@ -1,6 +1,6 @@
 import React from 'react';
 import '../../styles/auth-shared.css';
-import axios from 'axios';
+import axios from 'axios';//this is to make api calls from frontend to backend
 import { useNavigate } from 'react-router-dom';
 
 const UserLogin = () => {

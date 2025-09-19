@@ -52,9 +52,9 @@ const CreateFood = () => {
 
         const formData = new FormData();
 
-        formData.append('name', name);
+        formData.append('video', name);
         formData.append('description', description);
-        formData.append("mama", videoFile);
+        formData.append("video", videoFile);
 
         const response = await axios.post("http://localhost:3000/api/food", formData, {
             withCredentials: true,
@@ -64,7 +64,7 @@ const CreateFood = () => {
         navigate("/"); // Redirect to home or another page after successful creation
         // Optionally reset
         // setName(''); setDescription(''); setVideoFile(null);
-    };
+    }
 
     const isDisabled = useMemo(() => !name.trim() || !videoFile, [ name, videoFile ]);
 
