@@ -6,35 +6,48 @@ const saveModel = require("../models/save.model");
 
 
 async function createFood(req, res) {
-    // console.log(req.foodPartner); //getting value from middleware
-    // // Logic to create a new food item
-    // // You can access the food partner's information from req.foodPartner
-    // // For example, you might want to associate the food item with the food partner's ID
+    try {
+        // Validate required fields
+        if (!req.body.name || !req.file) {
+            return res.status(400).json({
+                error: "Name and video file are required"
+            });
+        }
 
-    // console.log(req.body);
-    // console.log(req.file);//file will be available because of multer middleware, this will contain video file buffer and other info
+        console.log('Creating food item:', {
+            name: req.body.name,
+            description: req.body.description,
+            foodPartner: req.foodPartner.id,
+            fileSize: req.file.size
+        });
 
+        // Upload video to ImageKit
+        const fileUploadResult = await storageService.uploadFile(req.file.buffer, uuid());
+        console.log('Video uploaded to:', fileUploadResult.url);
 
-    const fileUploadResult = await storageService.uploadFile(req.file.buffer, uuid());
-    // console.log(fileUploadResult);
+        // Save food item to the database
+        const foodItem = await foodModel.create({
+            name: req.body.name,
+            description: req.body.description,
+            video: fileUploadResult.url,
+            foodPartner: req.foodPartner.id
+        });
 
-   // Save food item to the database
-    const foodItem = await foodModel.create({
-        name: req.body.name,
-        description: req.body.description,
-        video:fileUploadResult.url,
-        foodPartner:req.foodPartner.id
-    });
+        console.log('Food item created:', foodItem._id);
 
-    res.status(201).json({
-        message: "Food item created successfully",
-        foodItem
-    });
+        // Send single response
+        res.status(201).json({
+            message: "Food item created successfully",
+            foodItem
+        });
 
-    // console.log(foodItem);
-
-
-    res.send("Food created successfully");
+    } catch (error) {
+        console.error('Error creating food item:', error);
+        res.status(500).json({
+            error: "Failed to create food item",
+            message: error.message
+        });
+    }
 }
 
 async function getFoodItems(req, res) {
