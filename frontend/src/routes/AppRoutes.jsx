@@ -15,12 +15,18 @@ const AppRoutes = () => {
     return (
         <Router>
             <Routes>
+                {/* Default landing page - Choose Register/Login */}
+                <Route path="/" element={<ChooseRegister />} />
                 <Route path="/register" element={<ChooseRegister />} />
+
+                {/* Authentication Routes */}
                 <Route path="/user/register" element={<UserRegister />} />
                 <Route path="/user/login" element={<UserLogin />} />
                 <Route path="/food-partner/register" element={<FoodPartnerRegister />} />
                 <Route path="/food-partner/login" element={<FoodPartnerLogin />} />
-                <Route path="/" element={<><Home /><BottomNav /></>} />
+
+                {/* Protected App Routes */}
+                <Route path="/home" element={<><Home /><BottomNav /></>} />
                 <Route path="/saved" element={<><Saved /><BottomNav /></>} />
                 <Route path="/create-food" element={<CreateFood />} />
                 <Route path="/food-partner/:id" element={<Profile />} />

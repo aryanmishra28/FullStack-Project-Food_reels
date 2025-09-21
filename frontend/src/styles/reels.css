@@ -87,20 +87,50 @@
 
 .reel-btn {
   align-self: flex-start;
-  background: var(--color-accent);
+  background: var(--gradient-primary);
   color: #fff;
-  border-radius: 999px;
-  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
   font-weight: 700;
-  letter-spacing: .3px;
+  letter-spacing: 0.5px;
   text-decoration: none;
-  box-shadow: var(--shadow-md);
-  transition: transform var(--transition-base), background var(--transition-base), box-shadow var(--transition-base);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  font-size: 0.9rem;
 }
 
-.reel-btn:hover { background: var(--color-accent-hover); }
-.reel-btn:active { transform: translateY(1px); }
-.reel-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.reel-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left var(--transition-slow);
+}
+
+.reel-btn:hover::before {
+  left: 100%;
+}
+
+.reel-btn:hover { 
+  transform: translateY(-2px); 
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+}
+
+.reel-btn:active { 
+  transform: translateY(0); 
+  box-shadow: var(--shadow-lg);
+}
+
+.reel-btn:focus-visible { 
+  outline: 2px solid rgba(255, 255, 255, 0.8); 
+  outline-offset: 3px; 
+}
 
 /* Desktop tweaks */
 @media (min-width: 768px) {
@@ -108,32 +138,56 @@
   .reel-description { font-size: 1.05rem; max-width: 70ch; }
 }
 
-/* Right-side vertical actions (like, bookmark, comments) */
+/* Enhanced right-side vertical actions */
 .reel-actions {
   position: absolute;
-  right: 10px;
-  bottom: 96px; /* above bottom CTA and nav */
+  right: 16px;
+  bottom: 120px; /* above bottom CTA and nav */
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
   pointer-events: auto;
+  z-index: 10;
 }
 
 .reel-action {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, #000 35%, transparent);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #fff;
-  border: 1px solid rgba(255,255,255,.15);
-  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
 }
 
-.reel-action:active { transform: translateY(1px); }
+.reel-action::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-glass);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.reel-action:hover::before {
+  opacity: 1;
+}
+
+.reel-action:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+}
+
+.reel-action:active { 
+  transform: scale(0.95); 
+}
 
 .reel-action__count {
   color: #fff;

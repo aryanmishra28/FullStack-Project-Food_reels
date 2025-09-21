@@ -50,20 +50,39 @@ const CreateFood = () => {
     const onSubmit = async (e) => {
         e.preventDefault();
 
-        const formData = new FormData();
+        try {
+            const formData = new FormData();
 
-        formData.append('video', name);
-        formData.append('description', description);
-        formData.append("video", videoFile);
+            // Fix: Correct field names
+            formData.append('name', name);
+            formData.append('description', description);
+            formData.append('video', videoFile);
 
-        const response = await axios.post("http://localhost:3000/api/food", formData, {
-            withCredentials: true,
-        })
+            console.log('Uploading:', { name, description, videoFile: videoFile?.name });
 
-        console.log(response.data);
-        navigate("/"); // Redirect to home or another page after successful creation
-        // Optionally reset
-        // setName(''); setDescription(''); setVideoFile(null);
+            const response = await axios.post("http://localhost:3000/api/food", formData, {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                }
+            });
+
+            console.log('Success:', response.data);
+            alert('Food video uploaded successfully!');
+            navigate("/home"); // Redirect to home after successful creation
+
+            // Reset form
+            setName('');
+            setDescription('');
+            setVideoFile(null);
+        } catch (error) {
+            console.error('Upload error:', error);
+            if (error.response) {
+                alert(`Upload failed: ${error.response.data.message || error.response.data.error || 'Unknown error'}`);
+            } else {
+                alert('Upload failed: Network error. Please check your connection.');
+            }
+        }
     }
 
     const isDisabled = useMemo(() => !name.trim() || !videoFile, [ name, videoFile ]);
